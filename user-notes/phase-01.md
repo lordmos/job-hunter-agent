@@ -1,6 +1,6 @@
 # 课程要求
 
-## 第一步：搭项目骨架 + 调通 DeepSeek API。你的方向是这样的：
+## 搭项目骨架 + 调通 DeepSeek API。你的方向是这样的：
 
 1. 初始化 Python 项目 — 用 uv 或 pip + venv 管理依赖
 2. 装两个包 — fastapi 和 openai（DeepSeek 兼容 OpenAI SDK，这是它的设计，见 DeepSeek API 文档）
