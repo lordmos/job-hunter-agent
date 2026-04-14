@@ -12,6 +12,8 @@ client = OpenAI(
     base_url=os.getenv("DEEPSEEK_BASE_URL"),
 )
 
+profile_path = 'profile.json'
+
 tools = [
     {
         "type": "function",
@@ -61,6 +63,19 @@ def handle_tool_call(tool_call_function):
         raise ValueError("未知工具调用")
 
 
+def match_skills(parsed_jd, profile):
+    prompt = f"""你是一个技术招聘专家。对比以下候选人档案和职位要求，给出技能匹配分析。
+        候选人档案：{json.dumps(profile, ensure_ascii=False)}
+        职位要求：{json.dumps(parsed_jd, ensure_ascii=False)}
+        输出格式（JSON）：
+        {{
+                "matched_skills": [...], "skill_gaps": [...], "summary": "一句话总结"
+        }}
+        只返回 JSON，不要添加任何解释文字或 markdown 代码块。
+        """
+    return prompt
+
+
 def send_message(messages):
     response = client.chat.completions.create(
         model=os.getenv("DEEPSEEK_MODEL"),
@@ -78,6 +93,14 @@ def send_message(messages):
                 "tool_call_id": tool_call.id,
                 "content": json.dumps(tool_result)  # 将工具结果转换为字符串形式
             })
+            if tool_call.function.name == "parse_jd":
+                with open(profile_path, 'r', encoding='utf-8') as f:
+                    profile = json.load(f)
+                    prompt = match_skills(tool_result, profile)
+                    messages.append({
+                        "role": "user",
+                        "content": prompt
+                    })
         return send_message(messages)  # 继续对话，工具调用后不需要用户输入
     else:
         return messages
@@ -87,7 +110,7 @@ def main():
     messages = [
         {
             "role": "system",
-            "content": "你是一个专注于技术岗位的求职教练。规则：1. 只回答求职相关问题，其他话题拒绝回答；2. 每个建议必须给出具体行动步骤；3. 回复不超过 200 字。",
+            "content": "你是一个专注于技术岗位的求职教练。只回答求职相关问题，其他话题拒绝回答。",
         },
     ]
     messages.append({
