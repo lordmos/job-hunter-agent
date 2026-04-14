@@ -28,6 +28,19 @@ def send_message(messages, json_mode=False):
 
 规则：后续代码要做 `json.loads()` 的地方，调用时传 `json_mode=True`。
 
+**DeepSeek 的强制要求（踩坑）：** 使用 `response_format=json_object` 时，prompt 中必须包含 "json" 关键词，否则 API 直接报错。这和 GPT-4 不同——GPT-4 不报错只是自由发挥字段。所以两个都需要：`response_format` 保证语法，prompt 里的 schema 描述保证字段结构。
+
+### 对话交互（短期 Memory）
+
+- LLM 无状态，每次调用都是全新请求
+- 多轮对话 = 把历史消息全部带着重新发（messages 数组持续累积）
+- `messages` 必须在循环外初始化，不能是全局变量（多用户污染问题）
+- 会话状态（如 context）应作为局部变量传参，不用全局变量
+
+### 工具调用时机是 LLM 决定的
+
+实验验证：用户分两条消息提供技能和 JD，LLM 在只收到技能时没有立刻调 `parse_profile`，等到 JD 也出现后才一起调两个工具。这个行为没有写任何规则，是 LLM 自主判断"什么时候调工具最合理"。这是 Agent 行为的核心体现。
+
 ### 什么是 Agent？
 
 **当前做的是"带工具的 LLM 应用"，不是真正的 Agent。**
@@ -38,6 +51,6 @@ def send_message(messages, json_mode=False):
 | 工具调用时机 | 程序员决定 | LLM 决定 |
 | 循环控制 | 代码控制几轮 | LLM 决定何时停止 |
 
-真正的 Agent 需要一个**通知/驱动机制**——把任务交给 LLM，LLM 自主规划步骤、决定工具调用顺序、判断任务完成。这就是第二阶段用 LangGraph 要解决的事。
+真正的 Agent 需要一个**通知/驱动机制（ReAct loop）**——把任务交给 LLM，LLM 自主规划步骤、决定工具调用顺序、判断任务完成。这就是第二阶段用 LangGraph 要解决的事。
 
 面试时要能说清楚这个区别。
