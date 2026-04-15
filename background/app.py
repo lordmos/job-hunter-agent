@@ -181,4 +181,65 @@ def main():
         print("模型回复：", messages[-1].content)
 
 
-main()
+# main()
+
+def test():
+
+    messages = [
+        {
+            "role": "system",
+            "content": """你是一个专注于技术岗位的求职教练。
+                1. 你需要引导用户提供职位描述，将JD结构化分析。
+                2. 你需要引导用户提供自己的候选人档案（技能列表）。
+                3. 如果用户提供了职位描述和候选人档案，你需要分析职位描述中的技能要求和候选人档案的匹配情况。
+                4. 如果用户需要简历优化，给出简历优化建议。
+                5. 用户可以多次输入职位描述，你需要针对新提供的职位描述进行分析和建议。
+                **重要约束:** 你只能回答求职相关问题，其他话题拒绝回答。
+            """
+        },
+        {
+            "role": "user",
+            "content": """
+                我的技能是：Node.js、TypeScript、Angular。
+                JD是：设计与开发企业级AIAgent系统。构建AIGC工具平台(图像/视频/语音/文本生成)。设计多Agent协作架构(任务分解/工具调用/记忆系统)。
+                基于React+Node+Python构建前后端一体化系统。集成LLM/多模态模型/RAG/向量数据库。参与Al原生工流设计 (PromptEngineering+Tool Calling+Workflow Orchestration)。
+                优化系统性能、可扩展性与部署架构(Docker/云原生/GPU环境)。技术栈要求：前端:熟练使用React/Next.js。
+                熟练现代前端工程化(Vite/Webpack/TypeScript)。熟练WebSocket/实时流媒体交互优先。后端:Node.js(Express/Fastify等)。
+                Python (FastAPI/Flask/AI推理服务)。RESTfuI APl设计经验。熟悉数据库(Postgres/Redis/向量数据库)。AI相关:熟悉LLMAPl调用与Agent架构。理解RAG、Embedding、PromptEngineering。
+                有AIGC平台或多模态项目经验优先。熟悉LangChain/AutoGen/CrewAI等框架优先。加分项:有AI Vibe Coding习惯(Cursor/Copilot深度使用者)，有模型部署经验(Docker/GPU/Ray/Kubernetes)，参加过开源项目，有创业项目经验
+            """
+        }
+    ]
+    response = client.chat.completions.create(
+        model=os.getenv("DEEPSEEK_MODEL"),
+        tools=tools,
+        messages=messages,
+        stream=True,  # 流式输出时不使用json_object格式，因为每个chunk可能不完整
+    )
+    tool_calls_buffer = {}
+    for chunk in response:
+        delta = chunk.choices[0].delta
+        if delta.tool_calls:
+            for tc in delta.tool_calls:
+                idx = tc.index  # 哪个 tool call（支持并行调用）
+                if idx not in tool_calls_buffer:
+                    tool_calls_buffer[idx] = {
+                        "id": "", "name": "", "arguments": ""}
+
+                if tc.id:
+                    tool_calls_buffer[idx]["id"] = tc.id
+                if tc.function.name:
+                    tool_calls_buffer[idx]["name"] = tc.function.name
+                if tc.function.arguments:
+                    # 拼接！
+                    tool_calls_buffer[idx]["arguments"] += tc.function.arguments
+
+        if chunk.choices[0].finish_reason == "tool_calls":
+            for idx, tool_call in tool_calls_buffer.items():
+                print(
+                    f"工具调用完成：{tool_call['name']}，参数：{tool_call['arguments']}")
+        if delta.content:
+            print(delta.content)
+
+
+test()
