@@ -98,9 +98,16 @@ async for event in graph.astream_events(state, version="v2"):
 ## 当前状态
 - [x] LangGraph hello world 跑通
 - [x] 条件边跑通
-- [x] 图骨架设计完成（graph_test.py）
-- [ ] node_call_llm 接入真实 DeepSeek LLM
-- [ ] node_execute_tools 实现工具调用
-- [ ] node_match_skills / node_generate_resume_advice 实现
-- [ ] 接入 astream_events + FastAPI SSE
+- [x] 图骨架设计完成（graph_test.py → graph.py）
+- [x] node_call_llm 接入真实 DeepSeek LLM（流式）
+- [x] node_execute_tools 实现工具调用
+- [x] node_match_skills / node_generate_resume_advice 实现（非流式 + response_format）
+- [x] 完整流程跑通：parse_jd → parse_profile → match_result → advice_result
+- [ ] 改为 async，接入 astream_events + FastAPI SSE
+
+## 完整流程验证输出
+```
+context keys: ['parse_jd', 'parse_profile', 'match_result', 'advice_result']
+```
+路径：call_llm → parse_jd → execute_tools → call_llm → parse_profile → execute_tools → match_skills → generate_resume_advice → END
  
